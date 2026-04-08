@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- ============================================================
+         002 - Datos iniciales de clientes y pedidos
+         ============================================================ -->
+
+    <changeSet id="002-1" author="sergio">
+        <comment>Insertar clientes de ejemplo</comment>
+        <insert tableName="cliente">
+            <column name="nombre"    value="Ana García"/>
+            <column name="email"     value="ana.garcia@mail.com"/>
+            <column name="ciudad"    value="Madrid"/>
+            <column name="activo"    valueBoolean="true"/>
+            <column name="creado_en" valueComputed="NOW()"/>
+        </insert>
+        <insert tableName="cliente">
+            <column name="nombre"    value="Luis Pérez"/>
+            <column name="email"     value="luis.perez@mail.com"/>
+            <column name="ciudad"    value="Barcelona"/>
+            <column name="activo"    valueBoolean="true"/>
+            <column name="creado_en" valueComputed="NOW()"/>
+        </insert>
+        <insert tableName="cliente">
+            <column name="nombre"    value="María López"/>
+            <column name="email"     value="maria.lopez@mail.com"/>
+            <column name="ciudad"    value="Sevilla"/>
+            <column name="activo"    valueBoolean="true"/>
+            <column name="creado_en" valueComputed="NOW()"/>
+        </insert>
+        <insert tableName="cliente">
+            <column name="nombre"    value="Carlos Ruiz"/>
+            <column name="email"     value="carlos.ruiz@mail.com"/>
+            <column name="ciudad"    value="Valencia"/>
+            <column name="activo"    valueBoolean="true"/>
+            <column name="creado_en" valueComputed="NOW()"/>
+        </insert>
+        <insert tableName="cliente">
+            <column name="nombre"    value="Sofía Martín"/>
+            <column name="email"     value="sofia.martin@mail.com"/>
+            <column name="ciudad"    value="Bilbao"/>
+            <column name="activo"    valueBoolean="true"/>
+            <column name="creado_en" valueComputed="NOW()"/>
+        </insert>
+        <rollback>
+            <delete tableName="cliente">
+                <where>email IN (
+                    'ana.garcia@mail.com',
+                    'luis.perez@mail.com',
+                    'maria.lopez@mail.com',
+                    'carlos.ruiz@mail.com',
+                    'sofia.martin@mail.com'
+                )</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="002-2" author="sergio" dbms="postgresql">
+        <comment>Insertar pedidos de ejemplo referenciando clientes por email</comment>
+        <sql>
+            INSERT INTO pedido (descripcion, total, estado, fecha, cliente_id)
+            SELECT 'Laptop Dell XPS 15', 1299.99, 'PAGADO', NOW() - INTERVAL '10 days', id
+            FROM cliente WHERE email = 'ana.garcia@mail.com';
+
+            INSERT INTO pedido (descripcion, total, estado, fecha, cliente_id)
+            SELECT 'Monitor LG 27"', 349.50, 'CONFIRMADO', NOW() - INTERVAL '5 days', id
+            FROM cliente WHERE email = 'ana.garcia@mail.com';
+
+            INSERT INTO pedido (descripcion, total, estado, fecha, cliente_id)
+            SELECT 'Teclado mecánico', 89.99, 'CREADO', NOW() - INTERVAL '2 days', id
+            FROM cliente WHERE email = 'luis.perez@mail.com';
+
+            INSERT INTO pedido (descripcion, total, estado, fecha, cliente_id)
+            SELECT 'Silla ergonómica', 450.00, 'PAGADO', NOW() - INTERVAL '15 days', id
+            FROM cliente WHERE email = 'maria.lopez@mail.com';
+
+            INSERT INTO pedido (descripcion, total, estado, fecha, cliente_id)
+            SELECT 'Auriculares Sony WH-1000', 279.00, 'CANCELADO', NOW() - INTERVAL '7 days', id
+            FROM cliente WHERE email = 'carlos.ruiz@mail.com';
+
+            INSERT INTO pedido (descripcion, total, estado, fecha, cliente_id)
+            SELECT 'Webcam Logitech 4K', 149.99, 'CREADO', NOW() - INTERVAL '1 day', id
+            FROM cliente WHERE email = 'sofia.martin@mail.com';
+        </sql>
+        <rollback>
+            <sql>
+                DELETE FROM pedido
+                WHERE descripcion IN (
+                    'Laptop Dell XPS 15',
+                    'Monitor LG 27"',
+                    'Teclado mecánico',
+                    'Silla ergonómica',
+                    'Auriculares Sony WH-1000',
+                    'Webcam Logitech 4K'
+                );
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
