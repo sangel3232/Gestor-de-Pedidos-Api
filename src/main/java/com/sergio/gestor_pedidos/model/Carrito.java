@@ -11,14 +11,18 @@ import java.util.List;
 
 @Entity
 @Table(name = "carrito")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"cliente", "items"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Carrito {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -31,7 +35,7 @@ public class Carrito {
     @Builder.Default
     private EstadoCarrito estado = EstadoCarrito.ACTIVO;
 
-    @OneToMany(mappedBy = "carrito", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "carrito", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default
     private List<CarritoItem> items = new ArrayList<>();
 

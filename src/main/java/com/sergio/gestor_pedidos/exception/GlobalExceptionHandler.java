@@ -38,7 +38,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorDTO> handleGeneric(Exception ex) {
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno", "Ocurrió un error inesperado", null);
+        ex.printStackTrace(); // visible en los logs del servidor
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno", ex.getMessage(), null);
     }
 
     private ResponseEntity<ApiErrorDTO> build(HttpStatus status, String error, String mensaje, List<String> detalles) {

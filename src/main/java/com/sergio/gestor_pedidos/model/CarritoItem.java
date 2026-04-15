@@ -8,14 +8,18 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "carrito_item")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"carrito", "producto"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class CarritoItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -23,7 +27,7 @@ public class CarritoItem {
                 foreignKey = @ForeignKey(name = "fk_item_carrito"))
     private Carrito carrito;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "producto_id", nullable = false,
                 foreignKey = @ForeignKey(name = "fk_item_producto"))
     private Producto producto;
@@ -33,7 +37,6 @@ public class CarritoItem {
     @Column(nullable = false)
     private Integer cantidad;
 
-    // Snapshot del precio al momento de agregar al carrito
     @NotNull
     @Column(name = "precio_unitario", nullable = false, precision = 12, scale = 2)
     private BigDecimal precioUnitario;

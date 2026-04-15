@@ -6,120 +6,68 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <changeSet id="001-1" author="sergio" dbms="postgresql">
-        <comment>Crear tipo ENUM estado_pedido</comment>
         <sql splitStatements="false">
             DO $body$
             BEGIN
                 IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estado_pedido') THEN
-                    CREATE TYPE estado_pedido AS ENUM ('CREADO', 'CONFIRMADO', 'PAGADO', 'CANCELADO');
+                    CREATE TYPE estado_pedido AS ENUM ('CREADO','CONFIRMADO','PAGADO','CANCELADO');
                 END IF;
             END $body$;
         </sql>
         <rollback>DROP TYPE IF EXISTS estado_pedido;</rollback>
     </changeSet>
 
-    <changeSet id="001-2" author="sergio">
-        <preConditions onFail="MARK_RAN">
-            <not><tableExists tableName="cliente"/></not>
-        </preConditions>
-
-        <comment>Crear tabla cliente</comment>
-
-        <createTable tableName="cliente">
-            <column name="id" type="BIGSERIAL">
-                <constraints primaryKey="true" nullable="false"/>
-            </column>
-            <column name="nombre" type="VARCHAR(100)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="email" type="VARCHAR(150)">
-                <constraints nullable="false" unique="true" uniqueConstraintName="uq_cliente_email"/>
-            </column>
-            <column name="ciudad" type="VARCHAR(100)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="activo" type="BOOLEAN" defaultValueBoolean="true">
-                <constraints nullable="false"/>
-            </column>
-            <column name="creado_en" type="TIMESTAMP" defaultValueComputed="NOW()">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <rollback>
-            <dropTable tableName="cliente"/>
-        </rollback>
+    <changeSet id="001-2" author="sergio" dbms="postgresql">
+        <sql splitStatements="false">
+            CREATE TABLE IF NOT EXISTS cliente (
+                id        BIGSERIAL    PRIMARY KEY,
+                nombre    VARCHAR(100) NOT NULL,
+                email     VARCHAR(150) NOT NULL UNIQUE,
+                ciudad    VARCHAR(100) NOT NULL,
+                activo    BOOLEAN      NOT NULL DEFAULT TRUE,
+                creado_en TIMESTAMP    NOT NULL DEFAULT NOW()
+            );
+        </sql>
+        <rollback>DROP TABLE IF EXISTS cliente;</rollback>
     </changeSet>
 
-    <changeSet id="001-3" author="sergio">
-        <preConditions onFail="MARK_RAN">
-            <not><indexExists indexName="idx_cliente_email"/></not>
-        </preConditions>
-
-        <comment>Indices sobre tabla cliente</comment>
-
-        <createIndex indexName="idx_cliente_email" tableName="cliente">
-            <column name="email"/>
-        </createIndex>
-
-        <createIndex indexName="idx_cliente_ciudad" tableName="cliente">
-            <column name="ciudad"/>
-        </createIndex>
-
+    <changeSet id="001-3" author="sergio" dbms="postgresql">
+        <sql splitStatements="false">
+            CREATE INDEX IF NOT EXISTS idx_cliente_email  ON cliente(email);
+            CREATE INDEX IF NOT EXISTS idx_cliente_ciudad ON cliente(ciudad);
+        </sql>
         <rollback>
-            <dropIndex indexName="idx_cliente_email" tableName="cliente"/>
-            <dropIndex indexName="idx_cliente_ciudad" tableName="cliente"/>
+            DROP INDEX IF EXISTS idx_cliente_email;
+            DROP INDEX IF EXISTS idx_cliente_ciudad;
         </rollback>
     </changeSet>
 
     <changeSet id="001-4" author="sergio" dbms="postgresql">
-        <preConditions onFail="MARK_RAN">
-            <not><tableExists tableName="pedido"/></not>
-        </preConditions>
-
-        <comment>Crear tabla pedido</comment>
-
         <sql splitStatements="false">
-            CREATE TABLE pedido (
-                id          BIGSERIAL       PRIMARY KEY,
-                descripcion VARCHAR(255)    NOT NULL,
-                total       NUMERIC(12,2)   NOT NULL CHECK (total >= 0),
-                estado      estado_pedido   NOT NULL DEFAULT 'CREADO',
-                fecha       TIMESTAMP       NOT NULL DEFAULT NOW(),
-                cliente_id  BIGINT          NOT NULL,
+            CREATE TABLE IF NOT EXISTS pedido (
+                id          BIGSERIAL     PRIMARY KEY,
+                descripcion VARCHAR(255)  NOT NULL,
+                total       NUMERIC(12,2) NOT NULL CHECK (total >= 0),
+                estado      estado_pedido NOT NULL DEFAULT 'CREADO',
+                fecha       TIMESTAMP     NOT NULL DEFAULT NOW(),
+                cliente_id  BIGINT        NOT NULL,
                 CONSTRAINT fk_pedido_cliente
                     FOREIGN KEY (cliente_id) REFERENCES cliente(id) ON DELETE RESTRICT
             );
         </sql>
-
-        <rollback>
-            DROP TABLE IF EXISTS pedido;
-        </rollback>
+        <rollback>DROP TABLE IF EXISTS pedido;</rollback>
     </changeSet>
 
-    <changeSet id="001-5" author="sergio">
-        <preConditions onFail="MARK_RAN">
-            <not><indexExists indexName="idx_pedido_estado"/></not>
-        </preConditions>
-
-        <comment>Indices sobre tabla pedido</comment>
-
-        <createIndex indexName="idx_pedido_estado" tableName="pedido">
-            <column name="estado"/>
-        </createIndex>
-
-        <createIndex indexName="idx_pedido_cliente_id" tableName="pedido">
-            <column name="cliente_id"/>
-        </createIndex>
-
-        <createIndex indexName="idx_pedido_fecha" tableName="pedido">
-            <column name="fecha" descending="true"/>
-        </createIndex>
-
+    <changeSet id="001-5" author="sergio" dbms="postgresql">
+        <sql splitStatements="false">
+            CREATE INDEX IF NOT EXISTS idx_pedido_estado     ON pedido(estado);
+            CREATE INDEX IF NOT EXISTS idx_pedido_cliente_id ON pedido(cliente_id);
+            CREATE INDEX IF NOT EXISTS idx_pedido_fecha      ON pedido(fecha DESC);
+        </sql>
         <rollback>
-            <dropIndex indexName="idx_pedido_estado" tableName="pedido"/>
-            <dropIndex indexName="idx_pedido_cliente_id" tableName="pedido"/>
-            <dropIndex indexName="idx_pedido_fecha" tableName="pedido"/>
+            DROP INDEX IF EXISTS idx_pedido_estado;
+            DROP INDEX IF EXISTS idx_pedido_cliente_id;
+            DROP INDEX IF EXISTS idx_pedido_fecha;
         </rollback>
     </changeSet>
 

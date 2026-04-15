@@ -6,7 +6,6 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <changeSet id="006-1" author="sergio" dbms="postgresql">
-        <comment>Crear ENUM rol_usuario</comment>
         <sql splitStatements="false">
             DO $body$
             BEGIN
@@ -19,14 +18,13 @@
     </changeSet>
 
     <changeSet id="006-2" author="sergio" dbms="postgresql">
-        <comment>Crear tabla usuario</comment>
         <sql splitStatements="false">
             CREATE TABLE IF NOT EXISTS usuario (
-                id         BIGSERIAL   PRIMARY KEY,
-                username   VARCHAR(80) NOT NULL UNIQUE,
+                id         BIGSERIAL    PRIMARY KEY,
+                username   VARCHAR(80)  NOT NULL UNIQUE,
                 password   VARCHAR(255) NOT NULL,
                 nombre     VARCHAR(120) NOT NULL,
-                rol        rol_usuario  NOT NULL DEFAULT 'USUARIO',
+                rol        VARCHAR(10)  NOT NULL DEFAULT 'USUARIO',
                 activo     BOOLEAN      NOT NULL DEFAULT TRUE,
                 cliente_id BIGINT,
                 creado_en  TIMESTAMP    NOT NULL DEFAULT NOW(),
@@ -36,35 +34,30 @@
         <rollback>DROP TABLE IF EXISTS usuario;</rollback>
     </changeSet>
 
-    <changeSet id="006-3" author="sergio">
-        <comment>Indice username</comment>
-        <createIndex indexName="idx_usuario_username" tableName="usuario">
-            <column name="username"/>
-        </createIndex>
-        <rollback><dropIndex indexName="idx_usuario_username" tableName="usuario"/></rollback>
+    <changeSet id="006-3" author="sergio" dbms="postgresql">
+        <sql splitStatements="false">
+            CREATE INDEX IF NOT EXISTS idx_usuario_username ON usuario(username);
+        </sql>
+        <rollback>DROP INDEX IF EXISTS idx_usuario_username;</rollback>
     </changeSet>
 
-    <changeSet id="006-4" author="sergio">
-        <comment>Usuario admin por defecto</comment>
-        <insert tableName="usuario">
-            <column name="username" value="admin"/>
-            <column name="password" value="admin123"/>
-            <column name="nombre"   value="Administrador"/>
-            <column name="rol"      value="ADMIN"/>
-        </insert>
-        <rollback><delete tableName="usuario"><where>username = 'admin'</where></delete></rollback>
+    <changeSet id="006-4" author="sergio" dbms="postgresql">
+        <sql splitStatements="false">
+            INSERT INTO usuario (username, password, nombre, rol)
+            SELECT 'admin', 'admin123', 'Administrador', 'ADMIN'
+            WHERE NOT EXISTS (SELECT 1 FROM usuario WHERE username = 'admin');
+        </sql>
+        <rollback>DELETE FROM usuario WHERE username = 'admin';</rollback>
     </changeSet>
 
-    <changeSet id="006-5" author="sergio">
-        <comment>Usuario de prueba vinculado al primer cliente</comment>
-        <insert tableName="usuario">
-            <column name="username"   value="usuario1"/>
-            <column name="password"   value="user123"/>
-            <column name="nombre"     value="Usuario Demo"/>
-            <column name="rol"        value="USUARIO"/>
-            <column name="cliente_id" valueComputed="(SELECT id FROM cliente ORDER BY id LIMIT 1)"/>
-        </insert>
-        <rollback><delete tableName="usuario"><where>username = 'usuario1'</where></delete></rollback>
+    <changeSet id="006-5" author="sergio" dbms="postgresql">
+        <sql splitStatements="false">
+            INSERT INTO usuario (username, password, nombre, rol, cliente_id)
+            SELECT 'usuario1', 'user123', 'Usuario Demo', 'USUARIO',
+                   (SELECT id FROM cliente ORDER BY id LIMIT 1)
+            WHERE NOT EXISTS (SELECT 1 FROM usuario WHERE username = 'usuario1');
+        </sql>
+        <rollback>DELETE FROM usuario WHERE username = 'usuario1';</rollback>
     </changeSet>
 
 </databaseChangeLog>

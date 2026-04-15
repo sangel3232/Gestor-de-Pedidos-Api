@@ -11,5 +11,6 @@
     <include file="db/changelog/changes/004-funciones-triggers.xml"/>
     <include file="db/changelog/changes/005-carrito-pago.xml"/>
     <include file="db/changelog/changes/006-usuarios.xml"/>
+    <include file="db/changelog/changes/007-fix-enum-columns.xml"/>
 
 </databaseChangeLog>

@@ -11,10 +11,18 @@ import java.util.Optional;
 
 public interface CarritoRepository extends JpaRepository<Carrito, Long> {
 
-    @Query("SELECT c FROM Carrito c JOIN FETCH c.cliente WHERE c.cliente.id = :clienteId AND c.estado = :estado")
+    @Query("SELECT DISTINCT c FROM Carrito c " +
+           "JOIN FETCH c.cliente " +
+           "LEFT JOIN FETCH c.items i " +
+           "LEFT JOIN FETCH i.producto " +
+           "WHERE c.cliente.id = :clienteId AND c.estado = :estado")
     Optional<Carrito> findByClienteIdAndEstado(@Param("clienteId") Long clienteId,
                                                @Param("estado") EstadoCarrito estado);
 
-    @Query("SELECT c FROM Carrito c JOIN FETCH c.cliente WHERE c.cliente.id = :clienteId ORDER BY c.creadoEn DESC")
+    @Query("SELECT DISTINCT c FROM Carrito c " +
+           "JOIN FETCH c.cliente " +
+           "LEFT JOIN FETCH c.items i " +
+           "LEFT JOIN FETCH i.producto " +
+           "WHERE c.cliente.id = :clienteId ORDER BY c.creadoEn DESC")
     List<Carrito> findByClienteId(@Param("clienteId") Long clienteId);
 }
