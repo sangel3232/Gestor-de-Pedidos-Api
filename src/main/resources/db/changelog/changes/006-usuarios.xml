@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="006-1" author="sergio" dbms="postgresql">
+        <comment>Crear ENUM rol_usuario</comment>
+        <sql splitStatements="false">
+            DO $body$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'rol_usuario') THEN
+                    CREATE TYPE rol_usuario AS ENUM ('ADMIN','USUARIO');
+                END IF;
+            END $body$;
+        </sql>
+        <rollback>DROP TYPE IF EXISTS rol_usuario;</rollback>
+    </changeSet>
+
+    <changeSet id="006-2" author="sergio" dbms="postgresql">
+        <comment>Crear tabla usuario</comment>
+        <sql splitStatements="false">
+            CREATE TABLE IF NOT EXISTS usuario (
+                id         BIGSERIAL   PRIMARY KEY,
+                username   VARCHAR(80) NOT NULL UNIQUE,
+                password   VARCHAR(255) NOT NULL,
+                nombre     VARCHAR(120) NOT NULL,
+                rol        rol_usuario  NOT NULL DEFAULT 'USUARIO',
+                activo     BOOLEAN      NOT NULL DEFAULT TRUE,
+                cliente_id BIGINT,
+                creado_en  TIMESTAMP    NOT NULL DEFAULT NOW(),
+                CONSTRAINT fk_usuario_cliente FOREIGN KEY (cliente_id) REFERENCES cliente(id) ON DELETE SET NULL
+            );
+        </sql>
+        <rollback>DROP TABLE IF EXISTS usuario;</rollback>
+    </changeSet>
+
+    <changeSet id="006-3" author="sergio">
+        <comment>Indice username</comment>
+        <createIndex indexName="idx_usuario_username" tableName="usuario">
+            <column name="username"/>
+        </createIndex>
+        <rollback><dropIndex indexName="idx_usuario_username" tableName="usuario"/></rollback>
+    </changeSet>
+
+    <changeSet id="006-4" author="sergio">
+        <comment>Usuario admin por defecto</comment>
+        <insert tableName="usuario">
+            <column name="username" value="admin"/>
+            <column name="password" value="admin123"/>
+            <column name="nombre"   value="Administrador"/>
+            <column name="rol"      value="ADMIN"/>
+        </insert>
+        <rollback><delete tableName="usuario"><where>username = 'admin'</where></delete></rollback>
+    </changeSet>
+
+    <changeSet id="006-5" author="sergio">
+        <comment>Usuario de prueba vinculado al primer cliente</comment>
+        <insert tableName="usuario">
+            <column name="username"   value="usuario1"/>
+            <column name="password"   value="user123"/>
+            <column name="nombre"     value="Usuario Demo"/>
+            <column name="rol"        value="USUARIO"/>
+            <column name="cliente_id" valueComputed="(SELECT id FROM cliente ORDER BY id LIMIT 1)"/>
+        </insert>
+        <rollback><delete tableName="usuario"><where>username = 'usuario1'</where></delete></rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="005-1" author="sergio" dbms="postgresql">
+        <comment>Crear ENUMs carrito y pago</comment>
+        <sql splitStatements="false">
+            DO $body$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estado_carrito') THEN
+                    CREATE TYPE estado_carrito AS ENUM ('ACTIVO','PROCESANDO','COMPLETADO','ABANDONADO');
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estado_pago') THEN
+                    CREATE TYPE estado_pago AS ENUM ('PENDIENTE','COMPLETADO','FALLIDO','REEMBOLSADO');
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'metodo_pago') THEN
+                    CREATE TYPE metodo_pago AS ENUM ('TARJETA_CREDITO','TARJETA_DEBITO','TRANSFERENCIA','EFECTIVO');
+                END IF;
+            END $body$;
+        </sql>
+        <rollback>
+            DROP TYPE IF EXISTS estado_carrito;
+            DROP TYPE IF EXISTS estado_pago;
+            DROP TYPE IF EXISTS metodo_pago;
+        </rollback>
+    </changeSet>
+
+    <changeSet id="005-2" author="sergio">
+        <comment>Crear tabla producto</comment>
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="producto"/></not>
+        </preConditions>
+        <createTable tableName="producto">
+            <column name="id" type="BIGSERIAL"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="nombre" type="VARCHAR(150)"><constraints nullable="false"/></column>
+            <column name="descripcion" type="VARCHAR(500)"/>
+            <column name="precio" type="NUMERIC(12,2)"><constraints nullable="false"/></column>
+            <column name="stock" type="INTEGER" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="activo" type="BOOLEAN" defaultValueBoolean="true"><constraints nullable="false"/></column>
+            <column name="creado_en" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+        </createTable>
+        <rollback><dropTable tableName="producto"/></rollback>
+    </changeSet>
+
+    <changeSet id="005-3" author="sergio" dbms="postgresql">
+        <comment>Crear tabla carrito</comment>
+        <sql splitStatements="false">
+            CREATE TABLE IF NOT EXISTS carrito (
+                id         BIGSERIAL      PRIMARY KEY,
+                cliente_id BIGINT         NOT NULL,
+                estado     estado_carrito NOT NULL DEFAULT 'ACTIVO',
+                creado_en  TIMESTAMP      NOT NULL DEFAULT NOW(),
+                CONSTRAINT fk_carrito_cliente FOREIGN KEY (cliente_id) REFERENCES cliente(id) ON DELETE RESTRICT
+            );
+        </sql>
+        <rollback>DROP TABLE IF EXISTS carrito;</rollback>
+    </changeSet>
+
+    <changeSet id="005-4" author="sergio">
+        <comment>Crear tabla carrito_item</comment>
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="carrito_item"/></not>
+        </preConditions>
+        <createTable tableName="carrito_item">
+            <column name="id" type="BIGSERIAL"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="carrito_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_item_carrito" references="carrito(id)"/>
+            </column>
+            <column name="producto_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_item_producto" references="producto(id)"/>
+            </column>
+            <column name="cantidad" type="INTEGER"><constraints nullable="false"/></column>
+            <column name="precio_unitario" type="NUMERIC(12,2)"><constraints nullable="false"/></column>
+        </createTable>
+        <rollback><dropTable tableName="carrito_item"/></rollback>
+    </changeSet>
+
+    <changeSet id="005-5" author="sergio" dbms="postgresql">
+        <comment>Crear tabla pago</comment>
+        <sql splitStatements="false">
+            CREATE TABLE IF NOT EXISTS pago (
+                id                 BIGSERIAL   PRIMARY KEY,
+                pedido_id          BIGINT      NOT NULL UNIQUE,
+                monto              NUMERIC(12,2) NOT NULL,
+                estado             estado_pago NOT NULL DEFAULT 'PENDIENTE',
+                metodo_pago        metodo_pago NOT NULL,
+                referencia_externa VARCHAR(100),
+                mensaje_respuesta  VARCHAR(255),
+                creado_en          TIMESTAMP   NOT NULL DEFAULT NOW(),
+                procesado_en       TIMESTAMP,
+                CONSTRAINT fk_pago_pedido FOREIGN KEY (pedido_id) REFERENCES pedido(id) ON DELETE RESTRICT
+            );
+        </sql>
+        <rollback>DROP TABLE IF EXISTS pago;</rollback>
+    </changeSet>
+
+    <changeSet id="005-6" author="sergio">
+        <comment>Indices carrito y pago</comment>
+        <createIndex indexName="idx_carrito_cliente_estado" tableName="carrito">
+            <column name="cliente_id"/><column name="estado"/>
+        </createIndex>
+        <createIndex indexName="idx_carrito_item_carrito" tableName="carrito_item">
+            <column name="carrito_id"/>
+        </createIndex>
+        <createIndex indexName="idx_pago_pedido" tableName="pago">
+            <column name="pedido_id"/>
+        </createIndex>
+        <createIndex indexName="idx_pago_estado" tableName="pago">
+            <column name="estado"/>
+        </createIndex>
+        <rollback>
+            <dropIndex indexName="idx_carrito_cliente_estado" tableName="carrito"/>
+            <dropIndex indexName="idx_carrito_item_carrito"   tableName="carrito_item"/>
+            <dropIndex indexName="idx_pago_pedido"            tableName="pago"/>
+            <dropIndex indexName="idx_pago_estado"            tableName="pago"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="005-7" author="sergio">
+        <comment>Productos de ejemplo</comment>
+        <insert tableName="producto">
+            <column name="nombre" value="Laptop Pro 15"/>
+            <column name="descripcion" value="Laptop de alto rendimiento con 16GB RAM"/>
+            <column name="precio" valueNumeric="1299.99"/>
+            <column name="stock" valueNumeric="20"/>
+        </insert>
+        <insert tableName="producto">
+            <column name="nombre" value="Mouse Inalambrico"/>
+            <column name="descripcion" value="Mouse ergonomico con bateria recargable"/>
+            <column name="precio" valueNumeric="29.99"/>
+            <column name="stock" valueNumeric="100"/>
+        </insert>
+        <insert tableName="producto">
+            <column name="nombre" value="Teclado Mecanico"/>
+            <column name="descripcion" value="Teclado mecanico RGB retroiluminado"/>
+            <column name="precio" valueNumeric="89.99"/>
+            <column name="stock" valueNumeric="50"/>
+        </insert>
+        <insert tableName="producto">
+            <column name="nombre" value="Monitor 27 pulgadas"/>
+            <column name="descripcion" value="Monitor 4K IPS con 144Hz"/>
+            <column name="precio" valueNumeric="449.99"/>
+            <column name="stock" valueNumeric="15"/>
+        </insert>
+        <insert tableName="producto">
+            <column name="nombre" value="Auriculares Bluetooth"/>
+            <column name="descripcion" value="Auriculares con cancelacion de ruido activa"/>
+            <column name="precio" valueNumeric="149.99"/>
+            <column name="stock" valueNumeric="35"/>
+        </insert>
+        <rollback><delete tableName="producto"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>
